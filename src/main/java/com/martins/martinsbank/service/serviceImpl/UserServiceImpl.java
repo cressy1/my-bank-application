@@ -4,6 +4,7 @@ import com.martins.martinsbank.dto.*;
 import com.martins.martinsbank.entity.User;
 import com.martins.martinsbank.repository.UserRepository;
 import com.martins.martinsbank.service.EmailService;
+import com.martins.martinsbank.service.TransactionService;
 import com.martins.martinsbank.service.UserService;
 import com.martins.martinsbank.util.AccountUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,8 @@ public class UserServiceImpl implements UserService {
     EmailService emailService;
     @Autowired
     UserRepository userRepository;
+    @Autowired
+    TransactionService transactionService;
 
     @Override
     public BankResponse createAccount(UserRequest userRequest) {
@@ -122,6 +125,15 @@ public class UserServiceImpl implements UserService {
         userToCredit.setAccountBalance(userToCredit.getAccountBalance().add(request.getAmount()));
         userRepository.save(userToCredit);
 
+        //save transaction
+        TransactionDto transactionDto = TransactionDto.builder()
+                .accountNumber(userToCredit.getAccountNumber())
+                .transactionType("CREDIT")
+                .amount(request.getAmount())
+                .build();
+
+        transactionService.saveTransaction(transactionDto);
+
         return BankResponse.builder()
                 .responseCode(AccountUtils.ACCOUNT_CREDITED_SUCCESS)
                 .responseMessage(AccountUtils.ACCOUNT_CREDITED_SUCCESS_MESSAGE)
@@ -155,9 +167,17 @@ public class UserServiceImpl implements UserService {
                     .accountInfo(null)
                     .build();
         }
+
         else {
             userToDebit.setAccountBalance(userToDebit.getAccountBalance().subtract(request.getAmount()));
             userRepository.save(userToDebit);
+            TransactionDto transactionDto = TransactionDto.builder()
+                    .accountNumber(userToDebit.getAccountNumber())
+                    .transactionType("DEBIT")
+                    .amount(request.getAmount())
+                    .build();
+
+            transactionService.saveTransaction(transactionDto);
             return BankResponse.builder()
                     .responseCode(AccountUtils.ACCOUNT_DEBITED_SUCCESS)
                     .responseMessage(AccountUtils.ACCOUNT_DEBITED_SUCCESS_MESSAGE)
@@ -209,16 +229,24 @@ public class UserServiceImpl implements UserService {
             User destinationAccountUser = userRepository.findByAccountNumber(request.getDestinationAccountNumber());
             destinationAccountUser.setAccountBalance(destinationAccountUser.getAccountBalance().add(request.getAmount()) );
        //   String recipientUserName = destinationAccountUser.getFirstName() + " " + destinationAccountUser.getLastName() + " " + destinationAccountUser.getOtherName();
-        userRepository.save(destinationAccountUser);
+            userRepository.save(destinationAccountUser);
             EmailDetails creditAlert = EmailDetails.builder()
                 .subject("CREDIT ALERT")
-                .recipient(sourceAccountUser.getEmail())
+                .recipient(destinationAccountUser.getEmail())
                 .messageBody("The sum of " + request.getAmount() + " has been credited to your account from, "  + sourceUserName + "," + " Your current balance is " + destinationAccountUser.getAccountBalance())
                 .build();
 
-        emailService.sendEmailAlert(creditAlert);
+            emailService.sendEmailAlert(creditAlert);
 
-        return BankResponse.builder()
+            TransactionDto transactionDto = TransactionDto.builder()
+                .accountNumber(destinationAccountUser.getAccountNumber())
+                .transactionType("CREDIT")
+                .amount(request.getAmount())
+                .build();
+
+            transactionService.saveTransaction(transactionDto);
+
+            return BankResponse.builder()
                 .responseCode(AccountUtils.TRANSFER_SUCCESSFUL_CODE)
                 .responseMessage(AccountUtils.TRANSFER_SUCCESSFUL_MESSAGE)
                 .accountInfo(null)
