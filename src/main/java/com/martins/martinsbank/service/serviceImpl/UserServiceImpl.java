@@ -1,6 +1,8 @@
 package com.martins.martinsbank.service.serviceImpl;
 
+import com.martins.martinsbank.config.JwtTokenProvider;
 import com.martins.martinsbank.dto.*;
+import com.martins.martinsbank.entity.Roles;
 import com.martins.martinsbank.entity.User;
 import com.martins.martinsbank.repository.UserRepository;
 import com.martins.martinsbank.service.EmailService;
@@ -8,6 +10,11 @@ import com.martins.martinsbank.service.TransactionService;
 import com.martins.martinsbank.service.UserService;
 import com.martins.martinsbank.util.AccountUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.support.BeanDefinitionDsl;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,7 +28,12 @@ public class UserServiceImpl implements UserService {
     UserRepository userRepository;
     @Autowired
     TransactionService transactionService;
-
+    @Autowired
+    PasswordEncoder passwordEncoder;
+    @Autowired
+    AuthenticationManager authenticationManager;
+    @Autowired
+    JwtTokenProvider jwtTokenProvider;
     @Override
     public BankResponse createAccount(UserRequest userRequest) {
         if (userRepository.existsByEmail(userRequest.getEmail())) {
@@ -42,9 +54,11 @@ public class UserServiceImpl implements UserService {
                 .accountNumber(AccountUtils.generateAccountNumber())
                 .accountBalance(BigDecimal.ZERO)
                 .email(userRequest.getEmail())
+                .password(passwordEncoder.encode(userRequest.getPassword()))
                 .phoneNumber(userRequest.getPhoneNumber())
                 .alternativePhoneNumber(userRequest.getAlternativePhoneNumber())
                 .status("ACTIVE")
+                .roles(Roles.valueOf("ROLE_ADMIN"))
                 .build();
         User savedUser = userRepository.save(newUser);
         //send email alert
@@ -72,6 +86,23 @@ public class UserServiceImpl implements UserService {
                         .accountName(savedUser.getFirstName() + " " + savedUser.getLastName() + " " + savedUser.getOtherName())
                         .build())
                 .build();
+    }
+
+    public BankResponse login(LoginDto loginDto) {
+        Authentication authentication = null;
+        authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getPassword()));
+
+                EmailDetails loginAlert = EmailDetails.builder()
+                        .subject("you are logged in!!!")
+                        .recipient(loginDto.getEmail())
+                        .messageBody("You logged into your account. If you did not initiate this request please contact customer care on 09051548332. \n Thank you")
+                        .build();
+                emailService.sendEmailAlert(loginAlert);
+                return BankResponse.builder()
+                        .responseCode("Login Successful")
+                        .responseMessage(jwtTokenProvider.generateJwtToken(authentication))
+                        .build();
+
     }
 
     @Override
