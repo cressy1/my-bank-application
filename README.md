@@ -1,4 +1,5 @@
 Overview
+
 The Banking Application is a modern, secure, and efficient platform designed to revolutionize the banking system by offering seamless digital banking services. This application provides users with features to manage their accounts, track transactions, and perform essential banking operations with ease. Built with Java Spring Boot, it ensures high performance, scalability, and robust security.
 
 User Entity Fields
@@ -74,7 +75,7 @@ Allows banks to focus resources on core financial services rather than manual ta
 
 Installation and Setup
 Clone the Repository:
-git clone https://github.com/your-repo/banking-app.git
+git clone https://github.com/cressy1/my-bank-application.git
 cd banking-app
 Configure Database
 Update the application.properties file with your database credentials:
