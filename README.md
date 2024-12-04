@@ -81,15 +81,15 @@ Configure Database
 Update the application.properties file with your database credentials:
 
 properties:
-spring.datasource.url=jdbc:postgresql://localhost:5432/bank_db
-spring.datasource.username=your_username
-spring.datasource.password=your_password
-Run the Application
-Use Maven to build and start the application:
+spring.datasource.url=jdbc:mysql://localhost:3306/my_bank
+spring.datasource.username=root
+spring.datasource.password=A12345badamashi
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.hibernate.ddl-auto=create-drop
+server.port=8082
+spring.jpa.show-sql=true
 
-
-Technologies Used
-
+Technologies Used:
 Backend: Java Spring Boot
 Database: PostgreSQL
 Authentication: Spring Security
